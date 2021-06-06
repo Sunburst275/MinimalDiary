@@ -15,6 +15,7 @@ namespace MinimalDiary
     public partial class MainForm : Form
     {
         const string ProgramName = "Minimal Diary";
+        const string KEY_LOCATION = "SOFTWARE\\MinimalDiary\\DefaultSaveLocation";
 
         public MainForm()
         {
@@ -42,23 +43,84 @@ namespace MinimalDiary
             MainMenuDefaultSaveLocation.Size = new Size(newsize, MainMenuDefaultSaveLocation.Size.Height);
         }
 
-        private void LoadDefaultLocation()
+        private void SetDefaultLocation()
         {
-            // TODO: Create this
+            Microsoft.Win32.RegistryKey key;
+            string DefaultSaveLocation = MainMenuDefaultSaveLocation.Text;
             try
             {
+                key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(KEY_LOCATION, true);
+                if (key == null)
+                {
+                    key = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(KEY_LOCATION, true);
+                }
 
+                key.SetValue("DefaultSaveLocation", DefaultSaveLocation, Microsoft.Win32.RegistryValueKind.String);
+                key.Close();
+
+                MessageBox.Show($"Set default save path to\n{DefaultSaveLocation}!",
+                    "Success!",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {
-
-                throw;
+                var x = "Something went wrong while trying to set the default save location!\nMessage:\n";
+                MessageBox.Show($"{x}{ex.Message}",
+                    "Error!",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+                return;
             }
+        }
+
+        private void LoadDefaultLocation()
+        {
+            Microsoft.Win32.RegistryKey key;
+            string DefaultSaveLocation = String.Empty;
+            try
+            {
+                key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(KEY_LOCATION, true);
+                if (key == null)
+                {
+                    // Create key
+                    key = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(KEY_LOCATION, true);
+                    key.SetValue("DefaultSaveLocation", (String.Empty));
+                    key.Close();
+                    return;
+                }
+
+                if (key.GetValueNames().Contains("DefaultSaveLocation"))
+                {
+                    DefaultSaveLocation = (string)(key.GetValue("DefaultSaveLocation"));
+                }
+                key.Close();
+
+                if (!Directory.Exists(Path.GetDirectoryName(DefaultSaveLocation)))
+                {
+                    MessageBox.Show("Couldn't load default save location!",
+                   "Error!",
+                   MessageBoxButtons.OK,
+                   MessageBoxIcon.Error);
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                var x = "Something went wrong while trying to load the default save location!\nMessage:\n";
+                MessageBox.Show($"{x}{ex.Message}",
+                    "Error!",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+                return;
+            }
+
+            MainMenuDefaultSaveLocation.Text = DefaultSaveLocation;
         }
 
         private void MainMenuItemSetDefaultLocation_Click(object sender, System.EventArgs e)
         {
-
+            SetDefaultLocation();
         }
 
         private void MainMenuItemSave_Click(object sender, System.EventArgs e)
@@ -94,7 +156,7 @@ namespace MinimalDiary
 
             if (!Directory.Exists(Path.GetDirectoryName(SaveLocationPath)))
             {
-                MessageBox.Show("Directory doesn't exist!", 
+                MessageBox.Show("Directory doesn't exist!",
                     "Error!",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error);
@@ -122,7 +184,7 @@ namespace MinimalDiary
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Something went wrong when trying to save your file!\nMessage:\n{ex.Message}",
+                MessageBox.Show($"Something went wrong while trying to save your file!\nMessage:\n{ex.Message}",
                     "Error!",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error);
@@ -133,7 +195,7 @@ namespace MinimalDiary
                 "Success!",
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Information);
-            if(res2 == DialogResult.Yes)
+            if (res2 == DialogResult.Yes)
             {
                 Environment.Exit(0);
             }
