@@ -1,14 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
 using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
 using System.IO;
-using System.Security;
+using System.Linq;
+using System.Windows.Forms;
 
 namespace MinimalDiary
 {
@@ -17,12 +11,27 @@ namespace MinimalDiary
         const string ProgramName = "Minimal Diary";
         const string KEY_LOCATION = "SOFTWARE\\MinimalDiary\\DefaultSaveLocation";
 
+        #region MainForm
         public MainForm()
         {
             InitializeComponent();
             this.Resize += new System.EventHandler(this.MainForm_Resize);
-            this.MainMenuItemSave.Click += MainMenuItemSave_Click;
-            this.MainMenuItemSetDefaultLocation.Click += MainMenuItemSetDefaultLocation_Click;
+            this.MainMenuSave.Click += MainMenuSave_Click;
+            this.MainMenuSetDefaultSaveLocation.Click += MainMenuSetDefaultSaveLocation_Click;
+            this.MainMenuGotoDefaultSaveLocation.Click += MainMenuGotoDefaultSaveLocation_Click;
+            this.KeyDown += MainForm_KeyDown;
+        }
+
+        private void MainForm_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Control && e.KeyCode == Keys.S)
+            {
+                SaveEntry();
+                if (e.Shift)
+                {
+                    Environment.Exit(0);
+                }
+            }
         }
 
         private void MainForm_Load(object sender, EventArgs e)
@@ -35,11 +44,12 @@ namespace MinimalDiary
         {
             ResizeMainMenuTextBox();
         }
+        #endregion
 
         private void ResizeMainMenuTextBox()
         {
             // Resize TextBoxDefaultSaveLocation to fit entire MainMenuBar
-            var newsize = MainMenu.Size.Width - (MainMenuItemSetDefaultLocation.Size.Width + MainMenuItemSave.Size.Width + 20);
+            var newsize = MainMenu.Size.Width - (MainMenuSetDefaultSaveLocation.Size.Width + MainMenuGotoDefaultSaveLocation.Size.Width + MainMenuSave.Size.Width + 20);
             MainMenuDefaultSaveLocation.Size = new Size(newsize, MainMenuDefaultSaveLocation.Size.Height);
         }
 
@@ -118,12 +128,28 @@ namespace MinimalDiary
             MainMenuDefaultSaveLocation.Text = DefaultSaveLocation;
         }
 
-        private void MainMenuItemSetDefaultLocation_Click(object sender, System.EventArgs e)
+        private void MainMenuSetDefaultSaveLocation_Click(object sender, System.EventArgs e)
         {
             SetDefaultLocation();
         }
 
-        private void MainMenuItemSave_Click(object sender, System.EventArgs e)
+        private void MainMenuGotoDefaultSaveLocation_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                System.Diagnostics.Process.Start("explorer.exe", $@"{MainMenuDefaultSaveLocation.Text}");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"An error occured:\n{ex.Message}",
+                    "Error!",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+                return;
+            }
+        }
+
+        private bool SaveEntry()
         {
             bool DefaultWasEnabled = false;
             string Name = string.Join("-", ProgramName.Split(" ")) +
@@ -141,7 +167,7 @@ namespace MinimalDiary
                 var res = sfd.ShowDialog();
                 if (res != DialogResult.OK || sfd.FileNames.Length > 1)
                 {
-                    return;
+                    return false;
                 }
 
                 SaveLocationPath = sfd.FileName;
@@ -160,7 +186,7 @@ namespace MinimalDiary
                     "Error!",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error);
-                return;
+                return false;
             }
 
             string SaveLocationAndName = String.Empty;
@@ -188,16 +214,24 @@ namespace MinimalDiary
                     "Error!",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error);
-                return;
+                return false;
             }
 
-            var res2 = MessageBox.Show("Saved successfully. Exit now?",
-                "Success!",
-                MessageBoxButtons.YesNo,
-                MessageBoxIcon.Information);
-            if (res2 == DialogResult.Yes)
+            return true;
+        }
+
+        private void MainMenuSave_Click(object sender, System.EventArgs e)
+        {
+            if (SaveEntry())
             {
-                Environment.Exit(0);
+                var res2 = MessageBox.Show("Saved successfully. Exit now?",
+                    "Success!",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Information);
+                if (res2 == DialogResult.Yes)
+                {
+                    Environment.Exit(0);
+                }
             }
         }
 
